@@ -125,7 +125,7 @@
 				
 				<option value="file34">github.com/Checkmarx/kics/pkg/engine/provider/extract.go (79.5%)</option>
 				
-				<option value="file35">github.com/Checkmarx/kics/pkg/engine/provider/filesystem.go (80.0%)</option>
+				<option value="file35">github.com/Checkmarx/kics/pkg/engine/provider/filesystem.go (71.8%)</option>
 				
 				<option value="file36">github.com/Checkmarx/kics/pkg/engine/secrets/inspector.go (84.4%)</option>
 				
@@ -207,7 +207,7 @@
 				
 				<option value="file75">github.com/Checkmarx/kics/pkg/printer/utils.go (82.4%)</option>
 				
-				<option value="file76">github.com/Checkmarx/kics/pkg/progress/circle/circle_progress.go (100.0%)</option>
+				<option value="file76">github.com/Checkmarx/kics/pkg/progress/circle/circle_progress.go (80.0%)</option>
 				
 				<option value="file77">github.com/Checkmarx/kics/pkg/progress/counter/counter_progress.go (63.6%)</option>
 				
@@ -275,7 +275,7 @@
 				
 				<option value="file109">github.com/Checkmarx/kics/pkg/terraformer/aws/aws_cloud_provider.go (93.3%)</option>
 				
-				<option value="file110">github.com/Checkmarx/kics/pkg/terraformer/azure/azure_cloud_provider.go (92.9%)</option>
+				<option value="file110">github.com/Checkmarx/kics/pkg/terraformer/azure/azure_cloud_provider.go (78.6%)</option>
 				
 				<option value="file111">github.com/Checkmarx/kics/pkg/terraformer/gcp/gcp_cloud_provider.go (93.8%)</option>
 				
@@ -2013,13 +2013,13 @@ func (m *Metrics) Stop() <span class="cov3" title="3">{
 // the type of profile
 func getTotal(prof *profile.Profile, idx int) int64 <span class="cov2" title="2">{
         var total, diffTotal int64
-        for _, sample := range prof.Sample </span><span class="cov8" title="33">{
+        for _, sample := range prof.Sample </span><span class="cov9" title="36">{
                 var v int64
                 v = sample.Value[idx]
                 if v &lt; 0 </span><span class="cov0" title="0">{
                         v = -v
                 }</span>
-                <span class="cov8" title="33">total += v
+                <span class="cov9" title="36">total += v
                 if sample.DiffBaseSample() </span><span class="cov0" title="0">{
                         diffTotal += v
                 }</span>
@@ -2044,7 +2044,7 @@ func (m *Metrics) formatTotal(b int64, typeMap map[string]float64, defaultMetric
                 <span class="cov1" title="1">return fmt.Sprintf("%.f%s", metric, defaultMetric)</span>
         }
         <span class="cov6" title="10">for k, u := range typeMap </span><span class="cov10" title="55">{
-                if u &gt;= formatter &amp;&amp; (value/u) &gt;= 1.0 </span><span class="cov8" title="23">{
+                if u &gt;= formatter &amp;&amp; (value/u) &gt;= 1.0 </span><span class="cov7" title="17">{
                         formatter = u
                         mesure = k
                 }</span>
@@ -5623,6 +5623,24 @@ func (s *FileSystemSourceProvider) GetBasePaths() []string <span class="cov1" ti
         return s.paths
 }</span>
 
+// ignoreDamagedFiles checks whether we should ignore a damaged file from a scan or not.
+func ignoreDamagedFiles(path string) bool <span class="cov0" title="0">{
+        shouldIgnoreFile := false
+        fileInfo, err := os.Lstat(path)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Warn().Msgf("Failed getting the file info for file '%s'", path)
+                return shouldIgnoreFile
+        }</span>
+        <span class="cov0" title="0">log.Info().Msgf("No mode type bits are set( is a regular file ) for file '%s' : %t ", path, fileInfo.Mode().IsRegular())
+
+        if fileInfo.Mode()&amp;os.ModeSymlink == os.ModeSymlink </span><span class="cov0" title="0">{
+                log.Warn().Msgf("File '%s' is a symbolic link - but seems not to be accessible", path)
+                shouldIgnoreFile = true
+        }</span>
+
+        <span class="cov0" title="0">return shouldIgnoreFile</span>
+}
+
 // GetSources tries to open file or directory and execute sink function on it
 func (s *FileSystemSourceProvider) GetSources(ctx context.Context,
         extensions model.Extensions, sink Sink, resolverSink ResolverSink) error <span class="cov2" title="7">{
@@ -5636,7 +5654,7 @@ func (s *FileSystemSourceProvider) GetSources(ctx context.Context,
                 <span class="cov2" title="4">if !fileInfo.IsDir() </span><span class="cov1" title="1">{
                         c, openFileErr := openScanFile(scanPath, extensions)
                         if openFileErr != nil </span><span class="cov0" title="0">{
-                                if openFileErr == ErrNotSupportedFile </span><span class="cov0" title="0">{
+                                if openFileErr == ErrNotSupportedFile || ignoreDamagedFiles(scanPath) </span><span class="cov0" title="0">{
                                         continue</span>
                                 }
                                 <span class="cov0" title="0">return openFileErr</span>
@@ -5658,12 +5676,12 @@ func (s *FileSystemSourceProvider) GetSources(ctx context.Context,
 
 func (s *FileSystemSourceProvider) walkDir(ctx context.Context, scanPath string, resolved bool,
         sink Sink, resolverSink ResolverSink, extensions model.Extensions) error <span class="cov1" title="3">{
-        return filepath.Walk(scanPath, func(path string, info os.FileInfo, err error) error </span><span class="cov9" title="28081">{
+        return filepath.Walk(scanPath, func(path string, info os.FileInfo, err error) error </span><span class="cov9" title="28109">{
                 if err != nil </span><span class="cov0" title="0">{
                         return err
                 }</span>
 
-                <span class="cov9" title="28081">if shouldSkip, skipFolder := s.checkConditions(info, extensions, path, resolved); shouldSkip </span><span class="cov9" title="27814">{
+                <span class="cov9" title="28109">if shouldSkip, skipFolder := s.checkConditions(info, extensions, path, resolved); shouldSkip </span><span class="cov9" title="27842">{
                         return skipFolder
                 }</span>
 
@@ -5689,8 +5707,11 @@ func (s *FileSystemSourceProvider) walkDir(ctx context.Context, scanPath string,
 
                 <span class="cov5" title="266">c, err := os.Open(filepath.Clean(path))
                 if err != nil </span><span class="cov0" title="0">{
-                        return errors.Wrap(err, "failed to open file")
-                }</span>
+                        if ignoreDamagedFiles(filepath.Clean(path)) </span><span class="cov0" title="0">{
+                                return nil
+                        }</span>
+                        <span class="cov0" title="0">return errors.Wrap(err, "failed to open file")</span>
+                }
                 <span class="cov5" title="266">defer closeFile(c, info)
 
                 err = sink(ctx, strings.ReplaceAll(path, "\\", "/"), c)
@@ -5732,27 +5753,27 @@ func closeFile(file *os.File, info os.FileInfo) <span class="cov5" title="266">{
 }
 
 func (s *FileSystemSourceProvider) checkConditions(info os.FileInfo, extensions model.Extensions,
-        path string, resolved bool) (bool, error) <span class="cov10" title="28084">{
+        path string, resolved bool) (bool, error) <span class="cov10" title="28112">{
         s.mu.RLock()
         defer s.mu.RUnlock()
-        if info.IsDir() </span><span class="cov8" title="6164">{
+        if info.IsDir() </span><span class="cov8" title="6168">{
                 if f, ok := s.excludes[info.Name()]; ok &amp;&amp; containsFile(f, info) </span><span class="cov1" title="1">{
                         log.Info().Msgf("Directory ignored: %s", path)
                         return true, filepath.SkipDir
                 }</span>
-                <span class="cov8" title="6163">_, err := os.Stat(filepath.Join(path, "Chart.yaml"))
-                if err != nil || resolved </span><span class="cov8" title="6161">{
+                <span class="cov8" title="6167">_, err := os.Stat(filepath.Join(path, "Chart.yaml"))
+                if err != nil || resolved </span><span class="cov8" title="6165">{
                         return true, nil
                 }</span>
                 <span class="cov1" title="2">return false, nil</span>
         }
 
-        <span class="cov9" title="21920">if f, ok := s.excludes[info.Name()]; ok &amp;&amp; containsFile(f, info) </span><span class="cov0" title="0">{
+        <span class="cov9" title="21944">if f, ok := s.excludes[info.Name()]; ok &amp;&amp; containsFile(f, info) </span><span class="cov0" title="0">{
                 log.Trace().Msgf("File ignored: %s", path)
                 return true, nil
         }</span>
-        <span class="cov9" title="21920">ext := utils.GetExtension(path)
-        if !extensions.Include(ext) </span><span class="cov9" title="21654">{
+        <span class="cov9" title="21944">ext := utils.GetExtension(path)
+        if !extensions.Include(ext) </span><span class="cov9" title="21678">{
                 log.Trace().Msgf("File ignored: %s", path)
                 return true, nil
         }</span>
@@ -15047,8 +15068,8 @@ func NewProgressBar(label string, silent bool) ProgressBar <span class="cov10" t
 }
 
 // Start initializes the Circle Progress Bar
-func (p ProgressBar) Start() <span class="cov1" title="1">{
-        for </span><span class="cov1" title="1">{ // increment until the Close func is called
+func (p ProgressBar) Start() <span class="cov0" title="0">{
+        for </span><span class="cov0" title="0">{ // increment until the Close func is called
                 p.pBar.Increment()
                 // lower cpu usage from infinite loop
                 time.Sleep(time.Millisecond * sleepTimeout)
@@ -19073,7 +19094,7 @@ func (a CloudProvider) Import(ctx context.Context, options *importer.ImportOptio
                 done &lt;- ImporterFunc(provider, *options, []string{options.ResourceGroup})
         }</span>()
 
-        <span class="cov8" title="1">go func() </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">go func() </span><span class="cov0" title="0">{
                 defer close(done)
                 wg.Wait()
         }</span>()
@@ -19556,15 +19577,15 @@ func StringifyStruct(v interface{}) (string, error) <span class="cov0" title="0"
 }
 
 // MapToStringSlice extract slice of keys from a map[string]string
-func MapToStringSlice(stringKeyMap map[string]string) []string <span class="cov8" title="4571">{
+func MapToStringSlice(stringKeyMap map[string]string) []string <span class="cov8" title="4574">{
         keys := make([]string, len(stringKeyMap))
 
         i := 0
-        for k := range stringKeyMap </span><span class="cov10" title="50286">{
+        for k := range stringKeyMap </span><span class="cov10" title="50319">{
                 keys[i] = k
                 i++
         }</span>
-        <span class="cov8" title="4571">return keys</span>
+        <span class="cov8" title="4574">return keys</span>
 }
 
 var queryHigh = model.QueryResult{
